@@ -14,8 +14,8 @@ router.use(authMiddleware);
 
 router.post("/",roleAuth(["librarian", "admin"]), addCategory);
 router.get("/", getCategories);
-router.put("/:id", roleAuthMiddleware(["admin", "librarian"]), updateCategory);
-router.delete("/:id", roleAuthMiddleware(["admin", "librarian"]), deleteCategory);
+router.put("/:id", roleAuth(["admin", "librarian"]), updateCategory);
+router.delete("/:id", roleAuth(["admin", "librarian"]), deleteCategory);
 
 
 module.exports = router;
