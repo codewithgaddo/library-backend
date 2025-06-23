@@ -1,9 +1,10 @@
 const mongoose = require("mongoose");
 
+
 const loanSchema = new mongoose.Schema({
   student: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Student",
+    ref: "User",
     required: true
   },
   book: {
@@ -15,12 +16,23 @@ const loanSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
-  returnDate: {
-    type: Date
+  dueDate: {
+    type: Date,
+    required: true
   },
+  returnDate: Date,
   isReturned: {
     type: Boolean,
     default: false
+  },
+  status: {
+    type: String,
+    enum: ["active", "returned", "overdue"],
+    default: "active"
+  },
+  fine: {
+    type: Number,
+    default: 0
   },
   lostOrDamaged: {
     status: {

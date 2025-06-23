@@ -7,9 +7,9 @@ const addCategory = async (req, res) => {
   try {
     const newCategory = new Category({ name, description });
     await newCategory.save();
-    res.status(201).json({ message: "Kategori oluşturuldu", category: newCategory });
+    res.status(201).json({ message: "Category created", category: newCategory });
   } catch (err) {
-    res.status(500).json({ message: "Kategori eklenemedi", error: err.message });
+    res.status(500).json({ message: "Category could not be added", error: err.message });
   }
 };
 
@@ -19,7 +19,7 @@ const getCategories = async (req, res) => {
     const categories = await Category.find();
     res.status(200).json(categories);
   } catch (err) {
-    res.status(500).json({ message: "Kategoriler yüklenemedi", error: err.message });
+    res.status(500).json({ message: "Categories could not be loaded", error: err.message });
   }
 };
 

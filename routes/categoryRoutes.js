@@ -5,8 +5,12 @@ const {
   addCategory,
   getCategories
 } = require("../controllers/categoryController");
+const authMiddleware = require("../middlewares/authMiddleware");
+const roleAuth = require("../middlewares/roleAuthMiddleware");
 
-router.post("/categories", addCategory);
-router.get("/categories", getCategories);
+router.use(authMiddleware);
+
+router.post("/",roleAuth(["librarian", "admin"]), addCategory);
+router.get("/", getCategories);
 
 module.exports = router;

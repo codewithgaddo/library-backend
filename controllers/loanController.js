@@ -8,7 +8,7 @@ const assignLoan = async (req, res) => {
   try {
     const book = await Book.findById(bookId);
     if (!book || !book.available) {
-      return res.status(400).json({ message: "Kitap mevcut değil." });
+      return res.status(400).json({ message: "The book is not available." });
     }
 
     // Reserve the book
@@ -18,19 +18,24 @@ const assignLoan = async (req, res) => {
     const newLoan = new Loan({ student: studentId, book: bookId });
     await newLoan.save();
 
-    res.status(201).json({ message: "Kitap ödünç verildi!", loan: newLoan });
+    res.status(201).json({ message: "The book has been borrowed!", loan: newLoan });
   } catch (err) {
-    res.status(500).json({ message: "Ödünç verirken hata oluştu", error: err.message });
+    res.status(500).json({ message: "An error occurred while lending", error: err.message });
   }
 };
 
 // Bring all loans (for the staff panel)
 const getAllLoans = async (req, res) => {
   try {
-    const loans = await Loan.find().populate("student").populate("book");
+    await checkAndUpdateLoanStatus(); // 🆕 overdue kontrolü
+
+    const loans = await Loan.find()
+      .populate("student", "-password")
+      .populate("book");
+
     res.status(200).json(loans);
   } catch (err) {
-    res.status(500).json({ message: "Ödünç listesi alınamadı", error: err.message });
+    res.status(500).json({ message: "Loan list could not be retrieved", error: err.message });
   }
 };
 
@@ -44,7 +49,7 @@ const getLoansByStudent = async (req, res) => {
 
     res.status(200).json(loans);
   } catch (err) {
-    res.status(500).json({ message: "Öğrenci kitapları alınamadı", error: err.message });
+    res.status(500).json({ message: "Student books could not be obtained", error: err.message });
   }
 };
 
@@ -54,20 +59,30 @@ const returnLoan = async (req, res) => {
 
   try {
     const loan = await Loan.findById(id);
-    if (!loan) return res.status(404).json({ message: "Kayıt bulunamadı" });
+    if (!loan) return res.status(404).json({ message: "No entry found" });
 
     loan.isReturned = true;
     loan.returnDate = new Date();
+
+    // If it is late, save the penalty amount
+    if (loan.dueDate && loan.returnDate > loan.dueDate) {
+      const daysLate = Math.ceil((loan.returnDate - loan.dueDate) / (1000 * 60 * 60 * 24));
+      const finePerDay = 5;
+      loan.fine = daysLate * finePerDay;
+      loan.status = "overdue";
+    } else {
+      loan.status = "returned";
+    }
+
     await loan.save();
 
-    // Kitabı müsait yap
     const book = await Book.findById(loan.book);
     book.available = true;
     await book.save();
 
-    res.status(200).json({ message: "Kitap iade edildi" });
+    res.status(200).json({ message: "The book has been returned", fine: loan.fine });
   } catch (err) {
-    res.status(500).json({ message: "Teslim sırasında hata", error: err.message });
+    res.status(500).json({ message: "Error during returned", error: err.message });
   }
 };
 
@@ -78,15 +93,34 @@ const reportLostOrDamaged = async (req, res) => {
 
   try {
     const loan = await Loan.findById(id);
-    if (!loan) return res.status(404).json({ message: "Kayıt bulunamadı" });
+    if (!loan) return res.status(404).json({ message: "No entry found" });
 
     loan.lostOrDamaged.status = true;
     loan.lostOrDamaged.note = note;
     await loan.save();
 
-    res.status(200).json({ message: "Kayıp / hasar bildirildi" });
+    res.status(200).json({ message: "Loss/damage reported" });
   } catch (err) {
-    res.status(500).json({ message: "Bildirim hatası", error: err.message });
+    res.status(500).json({ message: "Reported error", error: err.message });
+  }
+};
+
+const checkAndUpdateLoanStatus = async () => {
+  const today = new Date();
+
+  // Find active but overdue books
+  const overdueLoans = await Loan.find({
+    isReturned: false,
+    dueDate: { $lt: today }
+  });
+
+  for (let loan of overdueLoans) {
+    const daysLate = Math.ceil((today - loan.dueDate) / (1000 * 60 * 60 * 24));
+    const finePerDay = 5;
+
+    loan.status = "overdue";
+    loan.fine = daysLate * finePerDay;
+    await loan.save();
   }
 };
 

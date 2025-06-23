@@ -1,19 +1,14 @@
 const express = require("express");
 const router = express.Router();
 
-const {
-  addBook,
-  getAllBooks,
-  getBookByISBN
-} = require("../controllers/bookController");
+const { getAllBooks, addBook, getBookByISBN } = require("../controllers/bookController");
+const authMiddleware = require("../middlewares/authMiddleware");
+const roleAuth = require("../middlewares/roleAuthMiddleware");
 
-// Add Book
-router.post("/books", addBook);
+router.use(authMiddleware);
 
-// getAllBooks
-router.get("/books", getAllBooks);
-
-// getBookByISBN
-router.get("/books/:isbn", getBookByISBN);
+router.get("/", getAllBooks);
+router.post("/", roleAuth(["librarian","admin"]), addBook);
+router.get("/:isbn", getBookByISBN);
 
 module.exports = router;

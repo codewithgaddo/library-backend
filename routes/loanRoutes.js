@@ -8,11 +8,15 @@ const {
   returnLoan,
   reportLostOrDamaged
 } = require("../controllers/loanController");
+const authMiddleware = require("../middlewares/authMiddleware");
+const roleAuth = require("../middlewares/roleAuthMiddleware");
 
-router.post("/loans", assignLoan); 
-router.get("/loans", getAllLoans); 
-router.get("/loans/my/:studentId", getLoansByStudent); 
-router.patch("/loans/:id/return", returnLoan); 
-router.patch("/loans/:id/lost", reportLostOrDamaged); 
+router.use(authMiddleware);
+
+router.post("/", roleAuth(["librarian"]), assignLoan); 
+router.get("/", roleAuth(["librarian", "admin"]), getAllLoans); 
+router.get("/student/:studentId", roleAuth(["student"]), getLoansByStudent); 
+router.patch("/:id/return", roleAuth(["librarian"]), returnLoan); 
+router.patch("/:id/lost", roleAuth(["student"]), reportLostOrDamaged); 
 
 module.exports = router;
